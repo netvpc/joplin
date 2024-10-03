@@ -1,0 +1,69 @@
+name: Check for updates
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+      actions: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch versions
+        run: |
+          LOCAL_VER=$(git -c 'versionsort.suffix=-' \
+              ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/netvpc/joplin.git \
+              | grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | tail --lines=1 \
+              | cut --delimiter='/' --fields=3 || echo "none")
+
+          RELEASE_VER=$(git -c 'versionsort.suffix=-' \
+              ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/laurent22/joplin.git \
+              | grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | tail --lines=1 \
+              | cut --delimiter='/' --fields=3 || echo "none")
+
+          echo "Local version: $LOCAL_VER"
+
+          echo "Latest upstream version: $RELEASE_VER"
+
+          if [[ "$RELEASE_VER" == "none" ]]; then
+              echo "No release version available in the upstream repository."
+              exit 0
+          fi
+
+          if [[ "$LOCAL_VER" == "none" ]]; then
+              echo "No local version available. Proceeding with the first release..."
+              git tag ${RELEASE_VER}
+              git push origin ${RELEASE_VER}
+              gh workflow run docker-publish.yml --ref ${RELEASE_VER}
+              exit 0
+          fi
+
+          if [[ $(echo -e "$RELEASE_VER\n$LOCAL_VER" | sort -V | head -n1) != "$RELEASE_VER" ]]; then
+              echo "Updating to latest version $RELEASE_VER..."
+              if git rev-parse "refs/tags/${RELEASE_VER}" >/dev/null 2>&1; then
+                  echo "Tag $RELEASE_VER already exists, skipping tag creation."
+              else
+                  git tag ${RELEASE_VER}
+                  git push origin ${RELEASE_VER}
+              fi
+              gh workflow run docker-publish.yml --ref ${RELEASE_VER}
+          else
+              echo "No updates available..."
+          fi
