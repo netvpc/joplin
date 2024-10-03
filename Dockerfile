@@ -6,30 +6,42 @@ RUN git clone --recurse-submodules -j8 --depth 1 --branch ${VERSION} https://git
 
 FROM node:lts-bookworm AS builder
 
-RUN apt update && \
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
     # Required for both armv7 and armv8
         python3 \
         rsync \
         libssl-dev \
-    # Refer to https://www.npmjs.com/package/canvas#compiling
+    # Required for compiling canvas package, refer to https://www.npmjs.com/package/canvas#compiling
         build-essential \
         libcairo2-dev \
         libpango1.0-dev \
         libjpeg-dev \
         libgif-dev \
-        librsvg2-dev
+        librsvg2-dev \
+    # Additional dependencies for canvas and other graphic-related libraries
+        libfreetype6-dev \
+        libfontconfig1-dev \
+    # Required for sqlite3 package
+        libsqlite3-dev \
+        pkg-config
 
 # COPY --from=gitclone /joplin/ /build/
+
+# Copy yarn-related files and configurations
 COPY --from=gitclone /joplin/.yarn/plugins /build/.yarn/plugins/
 COPY --from=gitclone /joplin/.yarn/patches /build/.yarn/patches/
 COPY --from=gitclone /joplin/.yarn/releases /build/.yarn/releases/
 COPY --from=gitclone /joplin/.yarnrc.yml /build/
+COPY --from=gitclone /joplin/yarn.lock /build/
+
+# Copy build configuration and main project files
 COPY --from=gitclone /joplin/gulpfile.js /build/
 COPY --from=gitclone /joplin/package.json /build/
 COPY --from=gitclone /joplin/tsconfig.json /build/
-COPY --from=gitclone /joplin/yarn.lock /build/
+
+# Copy package folders (each related to specific functionalities)
 COPY --from=gitclone /joplin/packages/fork-htmlparser2 /build/packages/fork-htmlparser2/
 COPY --from=gitclone /joplin/packages/fork-sax /build/packages/fork-sax/
 COPY --from=gitclone /joplin/packages/fork-uslug /build/packages/fork-uslug/
@@ -47,7 +59,8 @@ WORKDIR /build/
 
 RUN corepack enable && corepack prepare
 
-RUN BUILD_SEQUENCIAL=1 yarn install --inline-builds \
+RUN --mount=type=cache,target=/root/.cache,sharing=locked \
+    BUILD_SEQUENCIAL=1 yarn install --inline-builds \
     && yarn cache clean \
     && rm -rf .yarn/berry \
     && rm -rf .yarn/cache
@@ -70,8 +83,8 @@ RUN set -eux; \
         \
     # Install gosu
         dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-        wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
-        wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
+        wget -q -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
+        wget -q -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
         export GNUPGHOME="$(mktemp -d)"; \
         gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
         gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
@@ -85,8 +98,8 @@ RUN set -eux; \
         : "${TINI_VERSION:?TINI_VERSION is not set}"; \
         dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
         echo "Downloading Tini version ${TINI_VERSION} for architecture ${dpkgArch}"; \
-        wget -O /usr/bin/tini "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-$dpkgArch"; \
-        wget -O /usr/bin/tini.asc "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-$dpkgArch.asc"; \
+        wget -q -O /usr/bin/tini "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-$dpkgArch"; \
+        wget -q -O /usr/bin/tini.asc "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-$dpkgArch.asc"; \
         export GNUPGHOME="$(mktemp -d)"; \
         gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7; \
         gpg --batch --verify /usr/bin/tini.asc /usr/bin/tini; \
