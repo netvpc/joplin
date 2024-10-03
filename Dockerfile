@@ -60,6 +60,7 @@ WORKDIR /build/
 RUN corepack enable && corepack prepare
 
 RUN --mount=type=cache,target=/root/.cache,sharing=locked \
+    NODE_OPTIONS=--max-old-space-size=3072 \
     BUILD_SEQUENCIAL=1 yarn install --inline-builds \
     && yarn cache clean \
     && rm -rf .yarn/berry \
