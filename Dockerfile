@@ -25,7 +25,9 @@ RUN apt-get update && \
         libfontconfig1-dev \
     # Required for sqlite3 package
         libsqlite3-dev \
-        pkg-config
+        pkg-config \
+    # Change memory allocator to avoid leaks
+        libjemalloc2
 
 # COPY --from=gitclone /joplin/ /build/
 
@@ -34,7 +36,7 @@ COPY --from=gitclone /joplin/.yarn/plugins /build/.yarn/plugins/
 COPY --from=gitclone /joplin/.yarn/patches /build/.yarn/patches/
 COPY --from=gitclone /joplin/.yarn/releases /build/.yarn/releases/
 COPY --from=gitclone /joplin/.yarnrc.yml /build/
-COPY --from=gitclone /joplin/yarn.lock /build/
+# COPY --from=gitclone /joplin/yarn.lock /build/
 
 # Copy build configuration and main project files
 COPY --from=gitclone /joplin/gulpfile.js /build/
@@ -57,13 +59,36 @@ COPY --from=gitclone /joplin/packages/utils /build/packages/utils/
 
 WORKDIR /build/
 
-RUN corepack enable && corepack prepare
+RUN corepack enable && corepack prepare yarn@stable --activate
 
-RUN --mount=type=cache,target=/root/.cache,sharing=locked \
-    BUILD_SEQUENCIAL=1 yarn install --inline-builds \
-    && yarn cache clean \
-    && rm -rf .yarn/berry \
-    && rm -rf .yarn/cache
+RUN dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')" && \
+    case "$dpkgArch" in \
+        armhf) \
+            export LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libjemalloc.so.2 && \
+            export NODE_OPTIONS=--max-old-space-size=3072 \
+            ;; \
+        arm64) \
+            export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2 \
+            ;; \
+        amd64) \
+            export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2 \
+            ;; \
+        *) \
+            echo "Unsupported architecture: $dpkgArch"; exit 1 \
+            ;; \
+    esac && \
+    echo "Using LD_PRELOAD=$LD_PRELOAD" && \
+    \
+    ATTEMPT=0; \
+    until [ $ATTEMPT -ge 3 ]; do \
+        GENERATE_SOURCEMAP=false BUILD_SEQUENCIAL=1 yarn install --inline-builds && break; \
+        ATTEMPT=$((ATTEMPT+1)); \
+        echo "Yarn install failed... retrying ($ATTEMPT/3)"; \
+        sleep 5; \
+    done && \
+    yarn cache clean && \
+    rm -rf .yarn/berry && \
+    rm -rf .yarn/cache
 
 FROM node:lts-bookworm-slim AS final
 
