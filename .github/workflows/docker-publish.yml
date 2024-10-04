@@ -88,9 +88,6 @@ jobs:
           flavor: |
             latest=false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -104,7 +101,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
 
-  build-arm:
+  build-arms:
     needs: [set-up]
     runs-on: self-hosted
     permissions:
@@ -173,7 +170,7 @@ jobs:
           platforms: linux/arm64, linux/arm/v7
 
   manifest:
-    needs: [set-up, build-amd64, build-arm]
+    needs: [set-up, build-amd64, build-arms]
     runs-on: ubuntu-latest
     permissions:
       contents: read
