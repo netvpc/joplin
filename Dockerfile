@@ -83,7 +83,7 @@ RUN corepack enable && \
         \
         ATTEMPT=0; \
         until [ $ATTEMPT -ge 3 ]; do \
-            GENERATE_SOURCEMAP=false BUILD_SEQUENCIAL=1 yarn install --inline-builds && break; \
+            GENERATE_SOURCEMAP=false BUILD_SEQUENCIAL=1 yarn install && break; \
             ATTEMPT=$((ATTEMPT+1)); \
             echo "Yarn install failed... retrying ($ATTEMPT/3)"; \
             sleep 5; \
