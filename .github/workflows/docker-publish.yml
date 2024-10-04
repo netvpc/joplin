@@ -37,30 +37,8 @@ jobs:
           flavor: |
             latest=true
 
-  login:
-    runs-on: ubuntu-latest
-    needs: set-up
-    steps:
-      # Login to GitHub Container Registry (GHCR)
-      - name: Log into GitHub Container Registry (GHCR)
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
-        with:
-          registry: ${{ env.REGISTRY_GHCR }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Login to Docker Hub
-      - name: Log into Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
-        with:
-          registry: ${{ env.REGISTRY_DOCKERHUB }}
-          username: ${{ secrets.DOCKER_HUB_USER }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
   build-amd64:
-    needs: [set-up, login]
+    needs: [set-up]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -79,6 +57,24 @@ jobs:
         run: |
           CLEAN_VERSION="${{ env.RELEASE_VERSION }}"
           echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+
+      # Login to GitHub Container Registry (GHCR)
+      - name: Log into GitHub Container Registry (GHCR)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Login to Docker Hub
+      - name: Log into Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
@@ -109,7 +105,7 @@ jobs:
           platforms: linux/amd64
 
   build-arm:
-    needs: [set-up, login]
+    needs: [set-up]
     runs-on: self-hosted
     permissions:
       contents: read
@@ -128,6 +124,24 @@ jobs:
         run: |
           CLEAN_VERSION="${{ env.RELEASE_VERSION }}"
           echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+
+      # Login to GitHub Container Registry (GHCR)
+      - name: Log into GitHub Container Registry (GHCR)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Login to Docker Hub
+      - name: Log into Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
@@ -159,7 +173,7 @@ jobs:
           platforms: linux/arm64, linux/arm/v7
 
   manifest:
-    needs: [set-up, build-amd64, build-arm, login]
+    needs: [set-up, build-amd64, build-arm]
     runs-on: ubuntu-latest
     permissions:
       contents: read
