@@ -59,33 +59,35 @@ COPY --from=gitclone /joplin/packages/utils /build/packages/utils/
 
 WORKDIR /build/
 
-RUN corepack enable && corepack prepare yarn@stable --activate
-
-RUN dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')" && \
-    case "$dpkgArch" in \
-        armhf) \
-            export LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libjemalloc.so.2 && \
-            export NODE_OPTIONS=--max-old-space-size=3072 \
-            ;; \
-        arm64) \
-            export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2 \
-            ;; \
-        amd64) \
-            export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2 \
-            ;; \
-        *) \
-            echo "Unsupported architecture: $dpkgArch"; exit 1 \
-            ;; \
-    esac && \
-    echo "Using LD_PRELOAD=$LD_PRELOAD" && \
-    \
-    ATTEMPT=0; \
-    until [ $ATTEMPT -ge 3 ]; do \
-        GENERATE_SOURCEMAP=false BUILD_SEQUENCIAL=1 yarn install --inline-builds && break; \
-        ATTEMPT=$((ATTEMPT+1)); \
-        echo "Yarn install failed... retrying ($ATTEMPT/3)"; \
-        sleep 5; \
-    done && \
+RUN corepack enable && \
+    corepack prepare yarn@stable --activate && \
+    yarn set version berry && \
+    yarn set version 3 && \
+    dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')" && \
+            case "$dpkgArch" in \
+                armhf) \
+                    export LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libjemalloc.so.2 && \
+                    export NODE_OPTIONS="--max-old-space-size=3072" \
+                    ;; \
+                arm64) \
+                    export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2 \
+                    ;; \
+                amd64) \
+                    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2 \
+                    ;; \
+                *) \
+                    echo "Unsupported architecture: $dpkgArch"; exit 1 \
+                    ;; \
+            esac && \
+        echo "Using LD_PRELOAD=$LD_PRELOAD" && \
+        \
+        ATTEMPT=0; \
+        until [ $ATTEMPT -ge 3 ]; do \
+            GENERATE_SOURCEMAP=false BUILD_SEQUENCIAL=1 yarn install --inline-builds && break; \
+            ATTEMPT=$((ATTEMPT+1)); \
+            echo "Yarn install failed... retrying ($ATTEMPT/3)"; \
+            sleep 5; \
+        done && \
     yarn cache clean && \
     rm -rf .yarn/berry && \
     rm -rf .yarn/cache
