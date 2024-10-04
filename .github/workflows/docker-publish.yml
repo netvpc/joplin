@@ -80,6 +80,18 @@ jobs:
           CLEAN_VERSION="${{ env.RELEASE_VERSION }}"
           echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@70b2cdc6480c1a8b86edf1777157f8f437de2166
+        with:
+          images: |
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=linux-amd64
+          flavor: |
+            latest=false
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -116,6 +128,19 @@ jobs:
         run: |
           CLEAN_VERSION="${{ env.RELEASE_VERSION }}"
           echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@70b2cdc6480c1a8b86edf1777157f8f437de2166
+        with:
+          images: |
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=linux-arm64
+            type=raw,value=linux-armv7
+          flavor: |
+            latest=false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
