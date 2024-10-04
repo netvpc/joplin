@@ -177,6 +177,24 @@ jobs:
       packages: write
       id-token: write
     steps:
+      # Login to GitHub Container Registry (GHCR)
+      - name: Log into GitHub Container Registry (GHCR)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Login to Docker Hub
+      - name: Log into Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@29df2a9f8c71c2dfe7db598180a0460355ec1c00
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
       - name: Create and push Docker manifest
         uses: int128/docker-manifest-create-action@v2
         with:
