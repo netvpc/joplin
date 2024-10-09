@@ -140,9 +140,11 @@ RUN set -eux; \
         [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
         apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
         
-COPY --from=builder --chown=1000:1000 /build/packages /home/node/packages
+COPY --from=builder --chown=1000:1000 /build/packages /opt/packages
 COPY prepare.sh /usr/bin/prepare
 
+WORKDIR /opt/packages/server
 VOLUME [ "/mnt/files" ]
+
 ENTRYPOINT ["tini", "--", "prepare"]
-CMD ["yarn", "start-prod"]
+CMD ["/usr/local/bin/node", "dist/app.js"]
