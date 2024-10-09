@@ -98,7 +98,11 @@ ENV NODE_ENV=production \
     GOSU_VERSION=1.17 \
     TINI_VERSION=v0.19.0 \
     UID=1000 \
-    GID=1000
+    GID=1000 \
+    TZ='Asia/Seoul' \
+    RUNNING_IN_DOCKER=true \
+    NTP_SERVER='time.google.com:123' \
+    SIGNUP_ENABLED=true
 
 RUN set -eux; \
     # Save list of currently installed packages for later cleanup
