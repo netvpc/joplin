@@ -148,7 +148,6 @@ COPY --from=builder --chown=1000:1000 /build/packages /opt/packages
 COPY prepare.sh /usr/bin/prepare
 
 WORKDIR /opt/packages/server
-VOLUME [ "/mnt/files" ]
 
 ENTRYPOINT ["tini", "--", "prepare"]
 CMD ["/usr/local/bin/node", "dist/app.js"]
